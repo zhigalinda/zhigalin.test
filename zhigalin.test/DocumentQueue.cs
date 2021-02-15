@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using zhigalin.test.Connectors;
@@ -46,7 +47,7 @@ namespace zhigalin.test
                 {
                     Send();
                 }
-                Task.Delay(1000).Wait();
+                Task.Delay(TimeSpan.FromSeconds(5)).Wait();
             }
         }
 
