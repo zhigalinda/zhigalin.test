@@ -8,62 +8,75 @@ using zhigalin.test.Models;
 
 namespace zhigalin.test
 {
-    class DocumentQueue : IDocumentQueue
+    class DocumentQueue : IDocumentQueue, IDisposable
     {
-        public static bool Stop { get; set; }
-        private static Queue<Document> queue;
-        private static Thread thread;
-        private static readonly ExternalSystemConnector connector;
+        private bool _disposed = false;
+        private readonly CancellationTokenSource source = new CancellationTokenSource();
+        private readonly Queue<Document> _queue = new Queue<Document>();
+        private readonly ExternalSystemConnector _connector;
+        private readonly CancellationToken _token;
 
-        static DocumentQueue()
+        public DocumentQueue(ExternalSystemConnector connector)
         {
-            queue = new Queue<Document>();
-            connector = new ExternalSystemConnector();
-            Stop = false;
-        }
+            _token = source.Token;
+            _connector = connector;
 
-        public DocumentQueue()
-        {            
-            if (thread == null)
-            {
-                thread = new Thread(Start);
-                thread.Start();
-            }
+            Task.Run(() => Start(_token));
         }
 
         public void Enqueue(Document document)
         {
-            lock(queue)
+            lock(_queue)
             {
-                queue.Enqueue(document);
+                _queue.Enqueue(document);
             }
         }
 
-        private void Start()
+        private async Task Start(CancellationToken cancellationToken = default)
         {
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                if (!Stop)
-                {
-                    Send();
-                }
-                Task.Delay(TimeSpan.FromSeconds(5)).Wait();
+                await Send();
+                await Task.Delay(TimeSpan.FromSeconds(5));
             }
         }
 
         private Task Send()
         {
-            lock (queue)
+            lock (_queue)
             {
                 var tmp = new Queue<Document>();
-                var count = queue.Count > 10 ? 10 : queue.Count;
+                var count = _queue.Count > 10 ? 10 : _queue.Count;
+
+                if (count == 0)
+                {
+                    return Task.CompletedTask;
+                }
 
                 for (int i = 0; i < count; i++)
                 {
-                    tmp.Enqueue(queue.Dequeue());
+                    tmp.Enqueue(_queue.Dequeue());
                 }
-                return connector.SendDocument(tmp);
+                return _connector.SendDocument(tmp);
             }
+        }
+
+        public void Dispose() => Dispose(true);
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                source.Cancel();
+                source.Dispose();
+            }
+
+            _disposed = true;
         }
     }
 }

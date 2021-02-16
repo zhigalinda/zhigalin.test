@@ -1,49 +1,17 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
+using zhigalin.test.Connectors;
 using zhigalin.test.Models;
 
 namespace zhigalin.test
 {
-    class Program
+    public class Program
     {
+        
         static async Task Main(string[] args)
         {
-            new Thread(CreateDocuments).Start();
-
-            Task.Delay(2000).Wait();
-
-            new Thread(CreateDocuments).Start();
-
-            Task.Delay(2000).Wait();
-
-            new Thread(CreateDocuments).Start();
-
-            Task.Delay(2000).Wait();
-
-            new Thread(Stop).Start();
-
-            Task.Delay(2000).Wait();
-
-            new Thread(Start).Start();
-        }
-
-        //Запуск отправки
-        public static void Start()
-        {
-            DocumentQueue.Stop = false;
-        }
-
-        //Остановка отправки
-        public static void Stop()
-        {
-            DocumentQueue.Stop = true;
-        }
-
-        //Добавление случайного количества документов
-        public static void CreateDocuments()
-        {
-            var queue = new DocumentQueue();
+            var connector = new ExternalSystemConnector();
+            var queue = new DocumentQueue(connector);
 
             for (int i = 0; i < 10; i++)
             {
@@ -52,6 +20,12 @@ namespace zhigalin.test
                     queue.Enqueue(new Document { Id = i });
                 }
             }
+
+            Task.Delay(10000).Wait();
+
+            queue.Dispose();
+
+            Console.ReadKey();
         }
     }
 }
