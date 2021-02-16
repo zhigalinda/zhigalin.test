@@ -15,13 +15,14 @@ namespace zhigalin.test
         private readonly Queue<Document> _queue = new Queue<Document>();
         private readonly ExternalSystemConnector _connector;
         private readonly CancellationToken _token;
+        private readonly Task _task;
 
         public DocumentQueue(ExternalSystemConnector connector)
         {
             _token = source.Token;
             _connector = connector;
 
-            Task.Run(() => Start(_token));
+            _task = Task.Run(() => Start(_token));
         }
 
         public void Enqueue(Document document)
@@ -74,6 +75,7 @@ namespace zhigalin.test
             {
                 source.Cancel();
                 source.Dispose();
+                _task.Dispose();
             }
 
             _disposed = true;
